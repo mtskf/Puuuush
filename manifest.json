@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Puuuush - Tab Manager",
+  "version": "1.0.0",
+  "description": "A Toby-like tab manager for Chrome.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "favicon"
+  ],
+  "chrome_url_overrides": {
+    "newtab": "index.html"
+  },
+  "icons": {
+    "16": "vite.svg",
+    "48": "vite.svg",
+    "128": "vite.svg"
+  }
+}
