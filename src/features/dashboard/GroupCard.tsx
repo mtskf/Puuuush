@@ -109,7 +109,7 @@ export function GroupCard({
         isSelected && "ring-2 ring-primary border-primary"
       )}>
         <CardHeader className="p-3 flex flex-row items-center justify-between space-y-0 cursor-default">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-1 min-w-0 mr-4">
              {/* Drag Handle */}
             <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
                <GripVertical className="h-4 w-4" />
