@@ -82,3 +82,50 @@ chrome.contextMenus.onClicked.addListener((info) => {
     chrome.tabs.create({ url: "index.html" });
   }
 });
+
+// Keyboard shortcut command listener
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === "archive-tabs") {
+    // Trigger the same archive action as clicking the extension icon
+    const currentWindow = await chrome.windows.getCurrent();
+    if (!currentWindow.id) return;
+
+    const tabs = await chrome.tabs.query({ windowId: currentWindow.id });
+    const extensionPrefix = `chrome-extension://${chrome.runtime.id}`;
+    const tabsToArchive = tabs.filter(t => t.url && !t.url.startsWith(extensionPrefix));
+
+    const uniqueTabs = new Map<string, TabItem>();
+    tabsToArchive.forEach(t => {
+      const url = t.url || '';
+      if (!uniqueTabs.has(url)) {
+        uniqueTabs.set(url, {
+          id: t.id?.toString() || uuidv4(),
+          url: url,
+          title: t.title || 'New Tab',
+          favIconUrl: t.favIconUrl
+        });
+      }
+    });
+
+    const tabItems: TabItem[] = Array.from(uniqueTabs.values());
+    if (tabItems.length === 0) return;
+
+    const newGroup: Group = {
+      id: uuidv4(),
+      title: `Archive ${new Date().toLocaleString()}`,
+      items: tabItems,
+      pinned: false,
+      collapsed: true,
+      order: Date.now(),
+      createdAt: Date.now()
+    };
+
+    await storage.addGroup(newGroup);
+    await chrome.tabs.create({ url: `index.html?newGroupId=${newGroup.id}` });
+
+    const tabIds = tabsToArchive.map(t => t.id).filter((id): id is number => id !== undefined);
+    if (tabIds.length > 0) {
+      await chrome.tabs.remove(tabIds);
+    }
+  }
+});

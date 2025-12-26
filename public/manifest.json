@@ -17,5 +17,14 @@
     "16": "icon128.png",
     "48": "icon128.png",
     "128": "icon128.png"
+  },
+  "commands": {
+    "archive-tabs": {
+      "suggested_key": {
+        "default": "Ctrl+Slash",
+        "mac": "Command+Slash"
+      },
+      "description": "Archive all tabs in current window"
+    }
   }
 }
