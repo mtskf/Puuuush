@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ## [0.4.0] - 2025-12-26
 ### Added
 - **Tooltips with Shortcuts**: Hover over action buttons to see button names and keyboard shortcuts (using `<kbd>` styling).
-- **Archive Keyboard Shortcut**: `⌘+/` (Mac) / `Ctrl+/` (Windows) to archive all tabs in current window.
+- **Archive Keyboard Shortcut**: `⌘+Shift+S` (Mac) / `Ctrl+Shift+S` (Windows) to archive all tabs in current window.
 - **Extension Icon**: Custom minimalist icon for the extension.
 - **MIT License**: Added LICENSE file.
 

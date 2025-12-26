@@ -37,7 +37,7 @@ Declutter your browser and your mind. Staaaash helps you organize tabs into name
 
 | Shortcut | Action |
 |:--------:|--------|
-| <kbd>⌘</kbd> <kbd>/</kbd> | Archive all tabs in current window |
+| <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>S</kbd> | Archive all tabs in current window |
 | <kbd>↵</kbd> | Rename selected group |
 | <kbd>⌘</kbd> <kbd>↵</kbd> | Restore selected item |
 | <kbd>⌫</kbd> | Delete selected item |

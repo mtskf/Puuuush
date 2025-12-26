@@ -21,7 +21,7 @@ Staaaash is a Chrome Extension designed to manage and organize browser tabs into
   - `TabItem`: Contains `id`, `url`, `title`, `favIconUrl`.
 
 ### 3. Background Scripts (`src/background`)
-- **Archiving**: Handles the click on the extension icon and `⌘+/` shortcut to archive current window tabs.
+- **Archiving**: Handles the click on the extension icon and `⌘+Shift+S` shortcut to archive current window tabs.
 - **Context Menu**: Manages the "Open Collections" context menu item.
 - **Keyboard Shortcuts**: Listens for `chrome.commands` for global shortcuts.
 - **Bundling**: Built with `esbuild` for proper module handling in the Service Worker environment.

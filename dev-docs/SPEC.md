@@ -34,7 +34,7 @@ A modern, minimalist tab manager extension for Chrome (Staaaash) that helps user
 ### 5. Keyboard Shortcuts
 | Shortcut | Action |
 |----------|--------|
-| `⌘` `/` | Archive all tabs (global) |
+| `⌘` `⇧` `S` | Archive all tabs (global) |
 | `↵` | Rename selected group |
 | `⌘` `↵` | Restore selected item |
 | `⌫` | Delete selected item |
