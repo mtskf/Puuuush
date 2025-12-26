@@ -479,15 +479,22 @@ export function Dashboard() {
            break;
         }
         case 'Enter': {
-          if (e.metaKey || e.ctrlKey) {
-            e.preventDefault();
-            if (currentIndex !== -1) {
-              const item = items[currentIndex];
-              if (item.type === 'group') {
-                restoreGroup(item.id);
-              } else if (item.type === 'tab' && item.groupId) {
-                restoreTab(item.groupId, item.id);
-              }
+          e.preventDefault();
+          if (currentIndex !== -1) {
+            const item = items[currentIndex];
+
+            // Restore: Cmd/Ctrl + Enter OR Shift + Enter
+            if (e.metaKey || e.ctrlKey || e.shiftKey) {
+               if (item.type === 'group') {
+                 restoreGroup(item.id);
+               } else if (item.type === 'tab' && item.groupId) {
+                 restoreTab(item.groupId, item.id);
+               }
+            } else {
+               // Rename: Enter (no modifiers)
+               if (item.type === 'group') {
+                   setRenamingGroupId(item.id);
+               }
             }
           }
           break;

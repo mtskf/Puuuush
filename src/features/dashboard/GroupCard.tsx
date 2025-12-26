@@ -144,7 +144,10 @@ export function GroupCard({
                   >
                     {group.title}
                   </h3>
-                  <Pencil className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <Pencil
+                    className="h-3 w-3 text-muted-foreground shrink-0 cursor-pointer hover:text-foreground"
+                    onClick={() => setIsEditing(true)}
+                  />
                 </div>
               )}
               <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
