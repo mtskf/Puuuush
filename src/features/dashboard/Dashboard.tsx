@@ -666,20 +666,22 @@ export function Dashboard() {
                   setSearchQuery('');
                 }
               }}
-              className="pl-9 pr-16"
+              className="pl-9 pr-16 h-9"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
               <Kbd>⌘</Kbd><Kbd>F</Kbd>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-1" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="h-4 w-4 mr-1" />
-            Import
-          </Button>
+          <div className="flex">
+            <Button variant="outline" size="sm" onClick={handleExport} className="rounded-r-none border-r-0">
+              <Download className="h-4 w-4 mr-1" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="rounded-l-none">
+              <Upload className="h-4 w-4 mr-1" />
+              Import
+            </Button>
+          </div>
           <input
             ref={fileInputRef}
             type="file"
