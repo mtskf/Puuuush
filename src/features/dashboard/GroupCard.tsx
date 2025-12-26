@@ -120,7 +120,7 @@ export function GroupCard({
               {group.collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
 
-            <div className="flex flex-col min-w-0">
+            <div className="flex flex-col min-w-0 flex-1">
               {isEditing ? (
                 <Input
                   id={`group-title-${group.id}`}
@@ -129,7 +129,7 @@ export function GroupCard({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTitle(e.target.value)}
                   onBlur={handleTitleSubmit}
                   onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && handleTitleSubmit()}
-                  className="h-7 text-sm"
+                  className="h-7 text-sm w-full"
                 />
               ) : (
                 <h3
