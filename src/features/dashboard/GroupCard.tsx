@@ -7,7 +7,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SortableTabCard } from './TabCard';
-import { GripVertical, Trash2, ChevronDown, ChevronRight, Pin, ArrowUpRight } from 'lucide-react';
+import { GripVertical, Trash2, ChevronDown, ChevronRight, Pin, ArrowUpRight, Pencil } from 'lucide-react';
 import { cn, formatRelativeTime } from '@/lib/utils'; // Keep this for now
 
 interface GroupCardProps {
@@ -136,13 +136,16 @@ export function GroupCard({
                   className="h-7 w-full"
                 />
               ) : (
-                <h3
-                  className="text-sm font-medium truncate cursor-text hover:underline"
-                  onClick={() => setIsEditing(true)}
-                  title="Click to rename"
-                >
-                  {group.title}
-                </h3>
+                <div className="flex items-center gap-1">
+                  <h3
+                    className="text-sm font-medium truncate cursor-text hover:underline"
+                    onClick={() => setIsEditing(true)}
+                    title="Click to rename"
+                  >
+                    {group.title}
+                  </h3>
+                  <Pencil className="h-3 w-3 text-muted-foreground shrink-0" />
+                </div>
               )}
               <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
                 <span>{group.createdAt ? formatRelativeTime(group.createdAt) : 'Unknown date'}</span>
