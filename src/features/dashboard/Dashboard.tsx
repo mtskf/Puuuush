@@ -192,7 +192,12 @@ export function Dashboard() {
                                     isSelected={selectedId === group.id}
                                     selectedTabId={selectedId}
                                     isRenaming={renamingGroupId === group.id}
-                                    onRenameStop={() => setRenamingGroupId(null)}
+                                    onRenameStop={() => {
+                                        setRenamingGroupId(null);
+                                        if (autoFocusGroupId === group.id) {
+                                            setAutoFocusGroupId(null);
+                                        }
+                                    }}
                                     isMerging={isShiftPressed}
                                 />
                             ))}
@@ -226,7 +231,12 @@ export function Dashboard() {
                                 isSelected={selectedId === group.id}
                                 selectedTabId={selectedId}
                                 isRenaming={renamingGroupId === group.id}
-                                onRenameStop={() => setRenamingGroupId(null)}
+                                onRenameStop={() => {
+                                    setRenamingGroupId(null);
+                                    if (autoFocusGroupId === group.id) {
+                                        setAutoFocusGroupId(null);
+                                    }
+                                }}
                                 isMerging={isShiftPressed}
                             />
                         ))}
