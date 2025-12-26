@@ -44,6 +44,7 @@ Declutter your browser and your mind. Staaaash helps you organize tabs into name
 | <kbd>P</kbd> | Pin/Unpin selected group |
 | <kbd>Esc</kbd> | Cancel editing |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Navigate through items |
+| <kbd>←</kbd> <kbd>→</kbd> | Collapse / Expand group |
 
 ---
 
