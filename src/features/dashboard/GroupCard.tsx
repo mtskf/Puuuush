@@ -120,7 +120,7 @@ export function GroupCard({
               {group.collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
 
-            <div className="flex flex-col min-w-0">
+            <div className="flex flex-col min-w-0 flex-1">
               {isEditing ? (
                 <Input
                   id={`group-title-${group.id}`}
@@ -128,12 +128,20 @@ export function GroupCard({
                   value={newTitle}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTitle(e.target.value)}
                   onBlur={handleTitleSubmit}
-                  onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && handleTitleSubmit()}
-                  className="h-7 text-sm"
+                  onKeyDown={(e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter') {
+                        handleTitleSubmit();
+                    } else if (e.key === 'Escape') {
+                        setNewTitle(group.title);
+                        setIsEditing(false);
+                        onRenameStop?.();
+                    }
+                  }}
+                  className="h-7 text-sm w-full"
                 />
               ) : (
                 <h3
-                  className="font-semibold truncate cursor-text hover:underline"
+                  className="text-sm font-medium truncate cursor-text hover:underline"
                   onClick={() => setIsEditing(true)}
                   title="Click to rename"
                 >
