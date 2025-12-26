@@ -582,7 +582,7 @@ export function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Collections</h2>
                 </div>
-                 <SortableContext items={unpinnedGroups.map(g => g.id)} strategy={verticalListSortingStrategy}>
+                 <SortableContext items={unpinnedGroups.map(g => g.id)} strategy={isShiftPressed ? undefined : verticalListSortingStrategy}>
                     <div className="flex flex-col gap-4">
                          {unpinnedGroups.map(group => (
                             <GroupCard
