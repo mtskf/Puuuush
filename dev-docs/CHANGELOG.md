@@ -27,7 +27,6 @@ All notable changes to this project will be documented in this file.
 - **MIT License**: Added LICENSE file.
 
 ### Changed
-- **Renamed Extension**: Puuuush → **Staaaash**
 - **README**: Reformatted with centered header, tables, and `<kbd>` styled shortcuts.
 - **Code Cleanup**: Removed unused files (`App.css`, `useTabs.ts`, `react.svg`).
 
