@@ -165,10 +165,17 @@ export function Dashboard() {
                 const targetGroup = groups.find(g => g.id === targetGroupId);
 
                 if (sourceGroup && targetGroup) {
-                    const newItems = [...targetGroup.items, ...sourceGroup.items];
+                    // Merge and deduplicate by URL
+                    const seenUrls = new Set<string>();
+                    const mergedItems = [...targetGroup.items, ...sourceGroup.items].filter(tab => {
+                        if (seenUrls.has(tab.url)) return false;
+                        seenUrls.add(tab.url);
+                        return true;
+                    });
+
                     const newGroups = groups
                         .filter(g => g.id !== sourceGroup.id)
-                        .map(g => g.id === targetGroup.id ? { ...g, items: newItems } : g);
+                        .map(g => g.id === targetGroup.id ? { ...g, items: mergedItems } : g);
 
                     await updateGroups(newGroups);
                 }
@@ -472,15 +479,22 @@ export function Dashboard() {
            break;
         }
         case 'Enter': {
-          if (e.metaKey || e.ctrlKey) {
-            e.preventDefault();
-            if (currentIndex !== -1) {
-              const item = items[currentIndex];
-              if (item.type === 'group') {
-                restoreGroup(item.id);
-              } else if (item.type === 'tab' && item.groupId) {
-                restoreTab(item.groupId, item.id);
-              }
+          e.preventDefault();
+          if (currentIndex !== -1) {
+            const item = items[currentIndex];
+
+            // Restore: Cmd/Ctrl + Enter OR Shift + Enter
+            if (e.metaKey || e.ctrlKey || e.shiftKey) {
+               if (item.type === 'group') {
+                 restoreGroup(item.id);
+               } else if (item.type === 'tab' && item.groupId) {
+                 restoreTab(item.groupId, item.id);
+               }
+            } else {
+               // Rename: Enter (no modifiers)
+               if (item.type === 'group') {
+                   setRenamingGroupId(item.id);
+               }
             }
           } else {
              // Handle Renaming (Enter without modifiers)
