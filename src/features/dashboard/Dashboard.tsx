@@ -1,34 +1,23 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
   pointerWithin,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragStartEvent,
-  type DragOverEvent,
-  type DragEndEvent,
-  defaultDropAnimationSideEffects,
-  type DropAnimation
+  type DropAnimation,
+  defaultDropAnimationSideEffects
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   verticalListSortingStrategy
 } from '@dnd-kit/sortable';
-import type { Group, TabItem } from '@/types';
-import { storage, StorageQuotaError } from '@/lib/storage';
+import { createPortal } from 'react-dom';
+import { Pin, FolderOpen } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { GroupCard } from './GroupCard';
 import { TabCard } from './TabCard';
-import { createPortal } from 'react-dom';
-import { Pin, FolderOpen, Search, Download, Upload } from 'lucide-react';
-import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Kbd } from '@/components/ui/kbd';
+import type { Group, TabItem } from '@/types';
+import { filterGroups } from '@/lib/logic';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,576 +28,86 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { filterGroups } from '@/lib/logic';
+
+import { useGroups } from '@/hooks/useGroups';
+import { useDashboardDnD } from '@/hooks/useDashboardDnD';
+import { useKeyboardNav } from '@/hooks/useKeyboardNav';
+import { DashboardHeader } from './DashboardHeader';
 
 export function Dashboard() {
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeItem, setActiveItem] = useState<Group | TabItem | null>(null);
-  const [autoFocusGroupId, setAutoFocusGroupId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [autoFocusGroupId, setAutoFocusGroupId] = useState<string | null>(null);
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const {
+      groups,
+      selectedId,
+      setSelectedId,
+      updateGroups,
+      updateGroupData,
+      removeGroup,
+      removeTab,
+      restoreGroup,
+      restoreTab,
+      getFlattenedItems,
+  } = useGroups();
 
-  const loadGroups = useCallback(async () => {
-    const data = await storage.get();
-    setGroups(data.groups.sort((a, b) => a.order - b.order));
+  const { isShiftPressed, shiftPressedRef } = useKeyboardNav({
+      groups,
+      selectedId,
+      setSelectedId,
+      updateGroups,
+      updateGroupData,
+      restoreGroup,
+      restoreTab,
+      removeGroup,
+      removeTab,
+      setRenamingGroupId,
+      searchInputRef,
+      getFlattenedItems
+  });
 
-    // Check for auto-focus request
+  const {
+      sensors,
+      activeId,
+      activeItem,
+      handleDragStart,
+      handleDragOver,
+      handleDragEnd
+  } = useDashboardDnD(groups, updateGroups, shiftPressedRef);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const newGroupId = params.get('newGroupId');
     if (newGroupId) {
        // Clear query param to prevent re-focus on refresh
        window.history.replaceState({}, '', 'index.html');
-       // We'll pass this ID down to identify which group needs focus
-       // For simplicity, we can just use a local state or pass it to a context.
-       // However, since we re-render here, let's store it or pass it.
-       // Actually, we can just set a temporary state 'autoFocusGroupId'
        setAutoFocusGroupId(newGroupId);
     }
   }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line
-    loadGroups();
-  }, [loadGroups]);
+  const pinnedGroups = useMemo(() =>
+    filterGroups(groups.filter(g => g.pinned), searchQuery),
+  [groups, searchQuery]);
 
-  const [isShiftPressed, setIsShiftPressed] = useState(false);
-  const shiftPressedRef = useRef(false);
+  const unpinnedGroups = useMemo(() =>
+    filterGroups(groups.filter(g => !g.pinned), searchQuery),
+  [groups, searchQuery]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Shift') {
-            setIsShiftPressed(true);
-            shiftPressedRef.current = true;
-        }
-    };
-    const handleKeyUp = (e: KeyboardEvent) => {
-        if (e.key === 'Shift') {
-             setIsShiftPressed(false);
-             shiftPressedRef.current = false;
-        }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  // Helper to get flattened list of visible items for navigation
-  const getFlattenedItems = useCallback(() => {
-    const items: Array<{ id: string, type: 'group' | 'tab', groupId?: string, data?: Group | TabItem }> = [];
-
-    const processGroup = (group: Group) => {
-      items.push({ id: group.id, type: 'group', data: group });
-      if (!group.collapsed) {
-        group.items.forEach(tab => {
-          items.push({ id: tab.id, type: 'tab', groupId: group.id, data: tab });
-        });
-      }
-    };
-
-    // Pinned groups first
-    groups.filter(g => g.pinned).forEach(processGroup);
-    // Unpinned groups second
-    groups.filter(g => !g.pinned).forEach(processGroup);
-
-    return items;
-  }, [groups]);
-
-  // Determine next selection when an item is removed
-  const getNextSelectionId = useCallback((idToRemove: string) => {
-    const items = getFlattenedItems();
-    const index = items.findIndex(item => item.id === idToRemove);
-    if (index === -1) return null;
-
-    // Try previous item first (user requested: immediately preceding)
-    if (index > 0) {
-      return items[index - 1].id;
-    }
-    // If no previous, try next item
-    if (index < items.length - 1) {
-      return items[index + 1].id;
-    }
-    return null;
-  }, [getFlattenedItems]);
-
-  const updateGroups = useCallback(async (newGroups: Group[]) => {
-    setGroups(newGroups);
-    try {
-      await storage.updateGroups(newGroups);
-    } catch (error) {
-      if (error instanceof StorageQuotaError) {
-        toast.error("Storage quota exceeded. Try removing some groups.");
-      } else {
-        toast.error("Failed to save changes.");
-      }
-      // Reload to get actual state
-      const data = await storage.get();
-      setGroups(data.groups.sort((a, b) => a.order - b.order));
-    }
-  }, []);
-
-
-
-  // Drag Handlers
-  const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const currentData = active.data.current;
-    setActiveId(active.id as string);
-    setActiveItem(currentData?.group || currentData?.tab);
+  // Import handler passed to Header
+  const handleImport = (importedGroups: Group[]) => {
+      // Ensure sorted order
+      updateGroups(importedGroups.sort((a, b) => a.order - b.order));
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { over } = event;
-    if (!over) return;
-
-    // const activeData = active.data.current?.data;
-    // const overData = over.data.current?.data;
-
-    // Handling Tab over Group or Tab over Tab (complex nested sortable)
-    // Simplified: We mostly handle logic in DragEnd for reordering
-    // Real-time visual feedback for moving between containers handles via dnd-kit automatically if setup right
+  const handleConfirmDelete = async () => {
+    if (!groupToDelete) return;
+    await removeGroup(groupToDelete.id);
+    setGroupToDelete(null);
+    toast.success('Group deleted.');
   };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
-    setActiveItem(null);
-
-    if (!over) return;
-
-    const activeType = active.data.current?.type;
-    const overType = over.data.current?.type;
-
-    // Group Reordering / Merging
-    if (activeType === 'Group') {
-        let targetGroupId: string | null = null;
-
-        if (overType === 'Group') {
-            targetGroupId = over.id as string;
-        } else if (overType === 'Tab') {
-            const targetGroup = groups.find(g => g.items.some(t => t.id === over.id));
-            if (targetGroup) targetGroupId = targetGroup.id;
-        }
-
-        if (targetGroupId && active.id !== targetGroupId) {
-            if (shiftPressedRef.current) {
-                // Merge Groups
-                const sourceGroup = groups.find(g => g.id === active.id);
-                const targetGroup = groups.find(g => g.id === targetGroupId);
-
-                if (sourceGroup && targetGroup) {
-                    // Merge and deduplicate by URL
-                    const seenUrls = new Set<string>();
-                    const mergedItems = [...targetGroup.items, ...sourceGroup.items].filter(tab => {
-                        if (seenUrls.has(tab.url)) return false;
-                        seenUrls.add(tab.url);
-                        return true;
-                    });
-
-                    const newGroups = groups
-                        .filter(g => g.id !== sourceGroup.id)
-                        .map(g => g.id === targetGroup.id ? { ...g, items: mergedItems } : g);
-
-                    await updateGroups(newGroups);
-                }
-            } else if (overType === 'Group') {
-                // Standard Reorder (only group-on-group)
-                const oldIndex = groups.findIndex(g => g.id === active.id);
-                const newIndex = groups.findIndex(g => g.id === targetGroupId);
-                const newGroups = arrayMove(groups, oldIndex, newIndex).map((g, idx) => ({ ...g, order: idx }));
-                await updateGroups(newGroups);
-            }
-        }
-        return;
-    }
-
-    // Tab Reordering / Moving
-    if (activeType === 'Tab') {
-        const activeTabId = active.id;
-        // Find which group the active tab belongs to
-        const sourceGroup = groups.find(g => g.items.some((t: TabItem) => t.id === activeTabId));
-
-        if (!sourceGroup) return;
-
-        // Ensure we dropped over something valid
-        let targetGroupId: string | null = null;
-
-        if (overType === 'Group') {
-            targetGroupId = over.id as string;
-        } else if (overType === 'Tab') {
-            // Did we drop onto another tab? Find its group
-             const targetGroup = groups.find(g => g.items.some((t: TabItem) => t.id === over.id));
-             targetGroupId = targetGroup ? targetGroup.id : null;
-        }
-
-        if (!targetGroupId) return;
-
-        const targetGroup = groups.find(g => g.id === targetGroupId)!;
-
-        // Case 1: Reordering within same group
-        if (sourceGroup.id === targetGroup.id) {
-            const oldIndex = sourceGroup.items.findIndex((t: TabItem) => t.id === activeTabId);
-            const newIndex = overType === 'Group'
-                ? sourceGroup.items.length // Append to end if dropped on group container
-                : sourceGroup.items.findIndex((t: TabItem) => t.id === over.id);
-
-            if (oldIndex !== newIndex && newIndex !== -1) {
-                const newItems = arrayMove(sourceGroup.items, oldIndex, newIndex);
-                const newGroups = groups.map(g =>
-                    g.id === sourceGroup.id ? { ...g, items: newItems } : g
-                );
-                await updateGroups(newGroups);
-            }
-        }
-        // Case 2: Moving to different group
-        else {
-             const tabToMove = sourceGroup.items.find((t: TabItem) => t.id === activeTabId)!;
-             const sourceItems = sourceGroup.items.filter((t: TabItem) => t.id !== activeTabId);
-
-             const targetItems = [...targetGroup.items];
-             if (overType === 'Group') {
-                 // Check visual order to decide insertion point
-                 const pinnedGroups = groups.filter(g => g.pinned).sort((a, b) => a.order - b.order);
-                 const unpinnedGroups = groups.filter(g => !g.pinned).sort((a, b) => a.order - b.order);
-                 const visualGroups = [...pinnedGroups, ...unpinnedGroups];
-
-                 const sourceIndex = visualGroups.findIndex(g => g.id === sourceGroup.id);
-                 const targetIndex = visualGroups.findIndex(g => g.id === targetGroup.id);
-
-                 if (targetIndex > sourceIndex) {
-                     // Moving DOWN to a group -> Insert at TOP
-                     targetItems.unshift(tabToMove);
-                 } else {
-                     // Moving UP to a group -> Insert at BOTTOM (default)
-                     targetItems.push(tabToMove);
-                 }
-             } else {
-                 const insertIndex = targetItems.findIndex(t => t.id === over.id);
-                 if (insertIndex !== -1) {
-                     targetItems.splice(insertIndex, 0, tabToMove);
-                 } else {
-                     targetItems.push(tabToMove);
-                 }
-             }
-
-             const newGroups = groups.map(g => {
-                 if (g.id === sourceGroup.id) return { ...g, items: sourceItems };
-                 if (g.id === targetGroup.id) return { ...g, items: targetItems };
-                 return g;
-             });
-             await updateGroups(newGroups);
-        }
-    }
-  };
-
-  const removeGroup = useCallback(async (id: string) => {
-    const nextId = getNextSelectionId(id);
-    const newGroups = groups.filter(g => g.id !== id);
-    await updateGroups(newGroups);
-    if (nextId) setSelectedId(nextId);
-  }, [groups, updateGroups, getNextSelectionId]);
-
-  const removeTab = useCallback(async (groupId: string, tabId: string) => {
-    const nextId = getNextSelectionId(tabId);
-    const newGroups = groups.map(g => {
-        if (g.id === groupId) {
-            return {
-                ...g,
-                items: g.items.filter((t: TabItem) => t.id !== tabId)
-            };
-        }
-        return g;
-    });
-    await updateGroups(newGroups);
-    if (nextId) setSelectedId(nextId);
-  }, [groups, updateGroups, getNextSelectionId]);
-
-  const updateGroupData = useCallback(async (id: string, data: Partial<Group>) => {
-      const newGroups = groups.map(g => g.id === id ? { ...g, ...data } : g);
-      setGroups(newGroups); // Optimistic update
-      try {
-        await storage.updateGroups(newGroups);
-      } catch {
-        toast.error("Failed to save changes.");
-      }
-  }, [groups]);
-
-  const restoreGroup = useCallback(async (id: string) => {
-    const nextId = getNextSelectionId(id);
-    const group = groups.find(g => g.id === id);
-    if (!group) return;
-
-    for (const item of group.items) {
-      await chrome.tabs.create({ url: item.url, active: false });
-    }
-    const newGroups = groups.filter(g => g.id !== id);
-    await updateGroups(newGroups);
-    if (nextId) setSelectedId(nextId);
-  }, [groups, updateGroups, getNextSelectionId]);
-
-  const restoreTab = useCallback(async (groupId: string, tabId: string) => {
-    const nextId = getNextSelectionId(tabId);
-    const group = groups.find(g => g.id === groupId);
-    if (!group) return;
-    const tab = group.items.find(t => t.id === tabId);
-    if (!tab) return;
-
-    await chrome.tabs.create({ url: tab.url, active: false });
-    const newGroups = groups.map(g => {
-        if (g.id === groupId) {
-            return {
-                ...g,
-                items: g.items.filter((t: TabItem) => t.id !== tabId)
-            };
-        }
-        return g;
-    });
-    await updateGroups(newGroups);
-    if (nextId) setSelectedId(nextId);
-  }, [groups, updateGroups, getNextSelectionId]);
-
-  // Renaming state
-  const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      // ⌘+F to focus search (allow even in inputs)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-        return;
-      }
-
-      // Ignore if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      const items = getFlattenedItems();
-      const currentIndex = items.findIndex(item => item.id === selectedId);
-
-
-
-      // Handle Reordering (Shift + ArrowUp/Down)
-      if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-         e.preventDefault();
-         if (currentIndex === -1) return;
-         const currentItem = items[currentIndex];
-
-         if (currentItem.type === 'tab' && currentItem.groupId) {
-             const group = groups.find(g => g.id === currentItem.groupId);
-             if (group) {
-                 const tabIndex = group.items.findIndex(t => t.id === currentItem.id);
-                 if (tabIndex !== -1) {
-                     // Check for cross-group move
-                     const isFirstItem = tabIndex === 0;
-                     const isLastItem = tabIndex === group.items.length - 1;
-
-                     if (e.key === 'ArrowUp' && isFirstItem) {
-                         // Move to previous group's bottom
-                         const pinnedGroups = groups.filter(g => g.pinned).sort((a, b) => a.order - b.order);
-                         const unpinnedGroups = groups.filter(g => !g.pinned).sort((a, b) => a.order - b.order);
-                         const visualGroups = [...pinnedGroups, ...unpinnedGroups];
-
-                         const groupIndex = visualGroups.findIndex(g => g.id === group.id);
-                         if (groupIndex > 0) {
-                             const prevGroup = visualGroups[groupIndex - 1];
-                             const newGroups = groups.map(g => {
-                                 if (g.id === group.id) {
-                                     return { ...g, items: g.items.filter(t => t.id !== currentItem.id) };
-                                 }
-                                 if (g.id === prevGroup.id) {
-                                     return { ...g, items: [...g.items, currentItem.data as TabItem], collapsed: false };
-                                 }
-                                 return g;
-                             });
-                             await updateGroups(newGroups);
-                             document.getElementById(`item-${currentItem.id}`)?.scrollIntoView({ block: 'nearest' });
-                         }
-                     } else if (e.key === 'ArrowDown' && isLastItem) {
-                         // Move to next group's bottom
-                         const pinnedGroups = groups.filter(g => g.pinned).sort((a, b) => a.order - b.order);
-                         const unpinnedGroups = groups.filter(g => !g.pinned).sort((a, b) => a.order - b.order);
-                         const visualGroups = [...pinnedGroups, ...unpinnedGroups];
-
-                         const groupIndex = visualGroups.findIndex(g => g.id === group.id);
-                         if (groupIndex !== -1 && groupIndex < visualGroups.length - 1) {
-                             const nextGroup = visualGroups[groupIndex + 1];
-                              const newGroups = groups.map(g => {
-                                 if (g.id === group.id) {
-                                     return { ...g, items: g.items.filter(t => t.id !== currentItem.id) };
-                                 }
-                                 if (g.id === nextGroup.id) {
-                                     return { ...g, items: [currentItem.data as TabItem, ...g.items], collapsed: false };
-                                 }
-                                 return g;
-                             });
-                             await updateGroups(newGroups);
-                             document.getElementById(`item-${currentItem.id}`)?.scrollIntoView({ block: 'nearest' });
-                         }
-                     } else {
-                         // Intra-group move
-                         const targetIndex = e.key === 'ArrowUp' ? tabIndex - 1 : tabIndex + 1;
-                         if (targetIndex >= 0 && targetIndex < group.items.length) {
-                             const newItems = [...group.items];
-                             const [movedTab] = newItems.splice(tabIndex, 1);
-                             newItems.splice(targetIndex, 0, movedTab);
-                             await updateGroupData(group.id, { items: newItems });
-                         }
-                     }
-                 }
-             }
-         } else if (currentItem.type === 'group') {
-             const group = currentItem.data as Group;
-             const isPinned = group.pinned;
-             // Filter groups of same type
-             const relevantGroups = groups.filter(g => !!g.pinned === !!isPinned);
-             const groupIndex = relevantGroups.findIndex(g => g.id === currentItem.id);
-
-             if (groupIndex !== -1) {
-                 const targetIndex = e.key === 'ArrowUp' ? groupIndex - 1 : groupIndex + 1;
-
-                 // Check bounds within the filtered list
-                 if (targetIndex >= 0 && targetIndex < relevantGroups.length) {
-                     // We need to swap positions in the MAIN groups list
-                     // Find the neighbor in the main list
-                     const neighbor = relevantGroups[targetIndex];
-                     const mainIndexCurrent = groups.findIndex(g => g.id === group.id);
-                     const mainIndexNeighbor = groups.findIndex(g => g.id === neighbor.id);
-
-                     if (mainIndexCurrent !== -1 && mainIndexNeighbor !== -1) {
-                         const newGroups = [...groups];
-                         // Simple swap
-                         [newGroups[mainIndexCurrent], newGroups[mainIndexNeighbor]] = [newGroups[mainIndexNeighbor], newGroups[mainIndexCurrent]];
-                         await updateGroups(newGroups);
-                         document.getElementById(`item-${currentItem.id}`)?.scrollIntoView({ block: 'nearest' });
-                     }
-                 }
-             }
-         }
-         return;
-      }
-
-
-      switch (e.key) {
-        case 'ArrowDown': {
-          e.preventDefault();
-          const nextIndex = currentIndex + 1;
-          if (nextIndex < items.length) {
-            setSelectedId(items[nextIndex].id);
-            document.getElementById(`item-${items[nextIndex].id}`)?.scrollIntoView({ block: 'nearest' });
-          } else if (items.length > 0 && currentIndex === -1) {
-             // Select first if none selected
-             setSelectedId(items[0].id);
-          }
-          break;
-        }
-        case 'ArrowUp': {
-          e.preventDefault();
-          const prevIndex = currentIndex - 1;
-          if (prevIndex >= 0) {
-            setSelectedId(items[prevIndex].id);
-            document.getElementById(`item-${items[prevIndex].id}`)?.scrollIntoView({ block: 'nearest' });
-          }
-          break;
-        }
-        case 'ArrowRight': {
-          e.preventDefault();
-          if (currentIndex !== -1 && items[currentIndex].type === 'group') {
-            const group = items[currentIndex].data as Group;
-            if (group.collapsed) {
-               updateGroupData(group.id, { collapsed: false });
-            }
-          }
-          break;
-        }
-        case 'ArrowLeft': {
-           e.preventDefault();
-           if (currentIndex !== -1) {
-             const item = items[currentIndex];
-             if (item.type === 'group') {
-               const group = item.data as Group;
-               if (!group.collapsed) {
-                 updateGroupData(group.id, { collapsed: true });
-               }
-             } else if (item.type === 'tab' && item.groupId) {
-               // If tab is selected, pressing left selects its parent group
-                setSelectedId(item.groupId);
-                document.getElementById(`item-${item.groupId}`)?.scrollIntoView({ block: 'nearest' });
-             }
-           }
-           break;
-        }
-        case 'Enter': {
-          e.preventDefault();
-          if (currentIndex !== -1) {
-            const item = items[currentIndex];
-
-            // Restore: Cmd/Ctrl + Enter
-            if (e.metaKey || e.ctrlKey) {
-               if (item.type === 'group') {
-                 restoreGroup(item.id);
-               } else if (item.type === 'tab' && item.groupId) {
-                 restoreTab(item.groupId, item.id);
-               }
-            } else {
-               // Rename: Enter (no modifiers)
-               if (item.type === 'group') {
-                   setRenamingGroupId(item.id);
-               }
-            }
-          } else {
-             // Handle Renaming (Enter without modifiers)
-             if (currentIndex !== -1 && items[currentIndex].type === 'group') {
-                e.preventDefault();
-                setRenamingGroupId(items[currentIndex].id);
-             }
-          }
-          break;
-        }
-        case 'Backspace':
-        case 'Delete': {
-           e.preventDefault();
-           if (currentIndex !== -1) {
-             const item = items[currentIndex];
-             if (item.type === 'group') {
-                removeGroup(item.id);
-             } else if (item.type === 'tab' && item.groupId) {
-                removeTab(item.groupId, item.id);
-             }
-           }
-           break;
-        }
-        case 'p': {
-          e.preventDefault();
-          if (currentIndex !== -1 && items[currentIndex].type === 'group') {
-             const group = items[currentIndex].data as Group;
-             updateGroupData(group.id, { pinned: !group.pinned });
-          }
-          break;
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [getFlattenedItems, selectedId, groups, updateGroupData, restoreGroup, restoreTab, removeGroup, removeTab, updateGroups]);
 
   const dropAnimation: DropAnimation = {
       sideEffects: defaultDropAnimationSideEffects({
@@ -620,99 +119,14 @@ export function Dashboard() {
       }),
   };
 
-  const pinnedGroups = useMemo(() =>
-    filterGroups(groups.filter(g => g.pinned), searchQuery),
-  [groups, searchQuery]);
-
-  const unpinnedGroups = useMemo(() =>
-    filterGroups(groups.filter(g => !g.pinned), searchQuery),
-  [groups, searchQuery]);
-
-  // Export handler
-  const handleExport = async () => {
-    try {
-      const json = await storage.exportData();
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `staaaash-backup-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('Backup exported successfully!');
-    } catch {
-      toast.error('Failed to export data.');
-    }
-  };
-
-  // Import handler
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const importedGroups = await storage.importData(text);
-      setGroups(importedGroups.sort((a, b) => a.order - b.order));
-      toast.success(`Imported ${importedGroups.length} groups successfully!`);
-    } catch {
-      toast.error('Failed to import data. Invalid file format.');
-    }
-    // Reset file input
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  // Confirm delete handler
-  const handleConfirmDelete = async () => {
-    if (!groupToDelete) return;
-    await removeGroup(groupToDelete.id);
-    setGroupToDelete(null);
-    toast.success('Group deleted.');
-  };
-
   return (
     <div className="min-h-screen bg-background text-foreground p-8">
-      <header className="mb-8 max-w-3xl mx-auto w-full">
-        <img src="/logo.png" alt="Staaaash" className="h-8 mb-8" />
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              placeholder="Search groups and tabs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  searchInputRef.current?.blur();
-                  setSearchQuery('');
-                }
-              }}
-              className="pl-9 pr-16 h-9"
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
-              <Kbd>⌘</Kbd><Kbd>F</Kbd>
-            </div>
-          </div>
-          <div className="flex">
-            <Button variant="outline" size="sm" onClick={handleExport} className="rounded-r-none border-r-0">
-              <Download className="h-4 w-4 mr-1" />
-              Export
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="rounded-l-none">
-              <Upload className="h-4 w-4 mr-1" />
-              Import
-            </Button>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleImport}
-            className="hidden"
-          />
-        </div>
-      </header>
+      <DashboardHeader
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onGroupsImported={handleImport}
+        searchInputRef={searchInputRef}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!groupToDelete} onOpenChange={(open) => !open && setGroupToDelete(null)}>
@@ -733,6 +147,19 @@ export function Dashboard() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Empty State */}
+      {groups.length === 0 && !searchQuery && (
+        <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in zoom-in-50 duration-300 slide-in-from-bottom-5">
+           <div className="bg-muted/30 p-4 rounded-full mb-4">
+             <FolderOpen className="h-10 w-10 text-muted-foreground/40" />
+           </div>
+           <h3 className="text-lg font-semibold text-foreground">No saved tabs yet</h3>
+           <p className="text-sm text-muted-foreground mt-2 max-w-[300px] leading-relaxed">
+             Click the extension icon in your browser toolbar to stash your open tabs into a new group.
+           </p>
+        </div>
+      )}
+
       <DndContext
         sensors={sensors}
         collisionDetection={pointerWithin}
@@ -744,17 +171,19 @@ export function Dashboard() {
             {/* Pinned Section */}
             {pinnedGroups.length > 0 && (
                 <section className="max-w-3xl mx-auto w-full">
-                    <h2 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider flex items-center gap-2"><Pin className="h-4 w-4" />Pinned</h2>
+                    <h2 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
+                        <Pin className="h-4 w-4" />Pinned
+                    </h2>
                     <SortableContext
-              items={pinnedGroups.map(g => g.id)}
-              strategy={isShiftPressed ? undefined : verticalListSortingStrategy}
-          >
-            <div className="flex flex-col gap-4">
-            {pinnedGroups.map(group => (
-              <GroupCard
-                key={group.id}
-                group={group}
-                                    onRemoveGroup={removeGroup}
+                        items={pinnedGroups.map(g => g.id)}
+                        strategy={isShiftPressed ? undefined : verticalListSortingStrategy}
+                    >
+                        <div className="flex flex-col gap-4">
+                            {pinnedGroups.map(group => (
+                                <GroupCard
+                                    key={group.id}
+                                    group={group}
+                                    onRemoveGroup={(id) => setGroupToDelete(groups.find(g => g.id === id) || null)}
                                     onRemoveTab={removeTab}
                                     onUpdateGroup={updateGroupData}
                                     onRestore={restoreGroup}
@@ -775,15 +204,20 @@ export function Dashboard() {
             {/* Main Grid */}
              <section className="max-w-3xl mx-auto w-full">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2"><FolderOpen className="h-4 w-4" />Collections</h2>
+                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4" />Collections
+                    </h2>
                 </div>
-                 <SortableContext items={unpinnedGroups.map(g => g.id)} strategy={isShiftPressed ? undefined : verticalListSortingStrategy}>
+                 <SortableContext
+                    items={unpinnedGroups.map(g => g.id)}
+                    strategy={isShiftPressed ? undefined : verticalListSortingStrategy}
+                 >
                     <div className="flex flex-col gap-4">
                          {unpinnedGroups.map(group => (
                             <GroupCard
                                 key={group.id}
                                 group={group}
-                                onRemoveGroup={removeGroup}
+                                onRemoveGroup={(id) => setGroupToDelete(groups.find(g => g.id === id) || null)}
                                 onRemoveTab={removeTab}
                                 onUpdateGroup={updateGroupData}
                                 onRestore={restoreGroup}
@@ -798,30 +232,13 @@ export function Dashboard() {
                         ))}
                     </div>
                 </SortableContext>
-            </section>
+             </section>
 
-            {/* Empty State */}
-            {groups.length === 0 && (
-              <section className="max-w-3xl mx-auto w-full">
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <FolderOpen className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                  <h2 className="text-xl font-semibold mb-2">No saved tabs yet</h2>
-                  <p className="text-muted-foreground mb-4 max-w-md">
-                    Press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">⌘</kbd> + <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">⇧</kbd> + <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">.</kbd> to archive all tabs in your current window, or click the Staaaash icon in the toolbar.
-                  </p>
-                </div>
-              </section>
-            )}
-        </div>
-
-        {createPortal(
-            <DragOverlay
-                dropAnimation={dropAnimation}
-                className={isShiftPressed ? 'cursor-copy-important' : 'cursor-grabbing-important'}
-            >
-                {activeItem && activeId ? (
-                   'items' in activeItem ? (
-                       <div className="w-full max-w-3xl">
+             {createPortal(
+                <DragOverlay dropAnimation={dropAnimation}>
+                  {activeId && activeItem ? (
+                     // Narrow type using 'in' operator to check for Group-specific property
+                     ('items' in activeItem) ? (
                            <GroupCard
                                group={activeItem as Group}
                                onRemoveGroup={() => {}}
@@ -829,20 +246,27 @@ export function Dashboard() {
                                onUpdateGroup={() => {}}
                                onRestore={() => {}}
                                onRestoreTab={() => {}}
+                               // Removed invalid 'isOverlay' string
                                autoFocusName={false}
                                isSelected={false}
                                selectedTabId={null}
-                            />
-                       </div>
-                   ) : (
-                       <div className="w-[300px]">
-                        <TabCard tab={activeItem as TabItem} onRemove={() => {}} onRestore={() => {}} />
-                       </div>
-                   )
-                ) : null}
-            </DragOverlay>,
-            document.body
-        )}
+                               isRenaming={false}
+                               onRenameStop={() => {}}
+                               isMerging={false}
+                           />
+                     ) : (
+                           <TabCard
+                               tab={activeItem as TabItem}
+                               onRemove={() => {}}
+                               onRestore={() => {}}
+                               isSelected={false}
+                           />
+                     )
+                  ) : null}
+                </DragOverlay>,
+                document.body
+              )}
+        </div>
       </DndContext>
     </div>
   );
