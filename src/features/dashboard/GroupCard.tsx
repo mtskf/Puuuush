@@ -133,11 +133,11 @@ export function GroupCard({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTitle(e.target.value)}
                   onBlur={handleTitleSubmit}
                   onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && handleTitleSubmit()}
-                  className="h-7 text-sm"
+                  className="h-7"
                 />
               ) : (
                 <h3
-                  className="font-semibold truncate cursor-text hover:underline"
+                  className="text-base font-medium truncate cursor-text hover:underline"
                   onClick={() => setIsEditing(true)}
                   title="Click to rename"
                 >
