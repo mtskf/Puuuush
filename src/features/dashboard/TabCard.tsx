@@ -26,7 +26,7 @@ export const TabCard = forwardRef<HTMLDivElement, TabCardProps & React.HTMLAttri
             isSelected && "ring-1 ring-primary border-primary bg-accent"
           )}>
           <div className="flex items-center gap-2 overflow-hidden">
-             <div className="text-muted-foreground/50 cursor-grab active:cursor-grabbing">
+             <div tabIndex={-1} className="text-muted-foreground/50 cursor-grab active:cursor-grabbing">
                 <GripVertical className="h-4 w-4" />
              </div>
             {tab.favIconUrl && (
