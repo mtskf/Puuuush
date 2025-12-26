@@ -6,8 +6,6 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, ArrowUpRight, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Kbd } from '@/components/ui/kbd';
 
 interface TabCardProps {
   tab: TabItem;
@@ -36,53 +34,35 @@ export const TabCard = forwardRef<HTMLDivElement, TabCardProps & React.HTMLAttri
             )}
             <span className="truncate text-sm font-medium">{tab.title}</span>
           </div>
-          <TooltipProvider delayDuration={300}>
-            <div className={cn(
-              "flex items-center gap-1 transition-opacity",
-              isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-            )}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      onRestore(tab.id);
-                    }}
-                    onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
-                  >
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="flex items-center gap-1">
-                  <span>Restore</span>
-                  <Kbd>⌘</Kbd><Kbd>↵</Kbd>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-red-500 hover:text-red-600"
-                    onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      onRemove(tab.id);
-                    }}
-                    onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="flex items-center gap-1">
-                  <span>Delete</span>
-                  <Kbd>⌫</Kbd>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </TooltipProvider>
+          <div className={cn(
+            "flex items-center gap-1 transition-opacity",
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                onRestore(tab.id);
+              }}
+              onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
+            >
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-red-500 hover:text-red-600"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                onRemove(tab.id);
+              }}
+              onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
         </Card>
       </div>
     );

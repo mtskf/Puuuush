@@ -128,6 +128,23 @@ export function Dashboard() {
     return items;
   }, [groups]);
 
+  // Determine next selection when an item is removed
+  const getNextSelectionId = useCallback((idToRemove: string) => {
+    const items = getFlattenedItems();
+    const index = items.findIndex(item => item.id === idToRemove);
+    if (index === -1) return null;
+
+    // Try previous item first (user requested: immediately preceding)
+    if (index > 0) {
+      return items[index - 1].id;
+    }
+    // If no previous, try next item
+    if (index < items.length - 1) {
+      return items[index + 1].id;
+    }
+    return null;
+  }, [getFlattenedItems]);
+
   const updateGroups = useCallback(async (newGroups: Group[]) => {
     setGroups(newGroups);
     try {
@@ -299,11 +316,14 @@ export function Dashboard() {
   };
 
   const removeGroup = useCallback(async (id: string) => {
+    const nextId = getNextSelectionId(id);
     const newGroups = groups.filter(g => g.id !== id);
     await updateGroups(newGroups);
-  }, [groups, updateGroups]);
+    if (nextId) setSelectedId(nextId);
+  }, [groups, updateGroups, getNextSelectionId]);
 
   const removeTab = useCallback(async (groupId: string, tabId: string) => {
+    const nextId = getNextSelectionId(tabId);
     const newGroups = groups.map(g => {
         if (g.id === groupId) {
             return {
@@ -314,7 +334,8 @@ export function Dashboard() {
         return g;
     });
     await updateGroups(newGroups);
-  }, [groups, updateGroups]);
+    if (nextId) setSelectedId(nextId);
+  }, [groups, updateGroups, getNextSelectionId]);
 
   const updateGroupData = useCallback(async (id: string, data: Partial<Group>) => {
       const newGroups = groups.map(g => g.id === id ? { ...g, ...data } : g);
@@ -327,6 +348,7 @@ export function Dashboard() {
   }, [groups]);
 
   const restoreGroup = useCallback(async (id: string) => {
+    const nextId = getNextSelectionId(id);
     const group = groups.find(g => g.id === id);
     if (!group) return;
 
@@ -335,9 +357,11 @@ export function Dashboard() {
     }
     const newGroups = groups.filter(g => g.id !== id);
     await updateGroups(newGroups);
-  }, [groups, updateGroups]);
+    if (nextId) setSelectedId(nextId);
+  }, [groups, updateGroups, getNextSelectionId]);
 
   const restoreTab = useCallback(async (groupId: string, tabId: string) => {
+    const nextId = getNextSelectionId(tabId);
     const group = groups.find(g => g.id === groupId);
     if (!group) return;
     const tab = group.items.find(t => t.id === tabId);
@@ -354,7 +378,8 @@ export function Dashboard() {
         return g;
     });
     await updateGroups(newGroups);
-  }, [groups, updateGroups]);
+    if (nextId) setSelectedId(nextId);
+  }, [groups, updateGroups, getNextSelectionId]);
 
   // Renaming state
   const [renamingGroupId, setRenamingGroupId] = useState<string | null>(null);
@@ -785,7 +810,7 @@ export function Dashboard() {
                   <FolderOpen className="h-16 w-16 text-muted-foreground/50 mb-4" />
                   <h2 className="text-xl font-semibold mb-2">No saved tabs yet</h2>
                   <p className="text-muted-foreground mb-4 max-w-md">
-                    Press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">⌘</kbd> + <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">⇧</kbd> + <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">S</kbd> to archive all tabs in your current window, or click the Staaaash icon in the toolbar.
+                    Press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">⌘</kbd> + <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">⇧</kbd> + <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">.</kbd> to archive all tabs in your current window, or click the Staaaash icon in the toolbar.
                   </p>
                 </div>
               </section>
