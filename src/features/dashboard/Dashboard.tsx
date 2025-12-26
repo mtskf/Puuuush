@@ -28,6 +28,7 @@ import { Pin, FolderOpen, Search, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Kbd } from '@/components/ui/kbd';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,7 @@ export function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -359,6 +361,13 @@ export function Dashboard() {
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // ⌘+F to focus search (allow even in inputs)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
       // Ignore if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
@@ -642,31 +651,41 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-background text-foreground p-8">
       <header className="mb-8 max-w-3xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold tracking-tight">Staaaash</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={handleExport} title="Export backup">
-              <Download className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title="Import backup">
-              <Upload className="h-4 w-4" />
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleImport}
-              className="hidden"
+        <h1 className="text-3xl font-bold tracking-tight mb-4">Staaaash</h1>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              ref={searchInputRef}
+              placeholder="Search groups and tabs..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  searchInputRef.current?.blur();
+                  setSearchQuery('');
+                }
+              }}
+              className="pl-9 pr-16"
             />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+              <Kbd>⌘</Kbd><Kbd>F</Kbd>
+            </div>
           </div>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search groups and tabs..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-1" />
+            Export
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-1" />
+            Import
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            className="hidden"
           />
         </div>
       </header>
