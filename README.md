@@ -1,66 +1,89 @@
-# Staaaash
+<p align="center">
+  <img src="public/icon128.png" width="80" alt="Staaaash Icon" />
+</p>
 
-The modern, minimalist tab manager for Chrome. Save your tabs now. Restore them when you're ready.
+<h1 align="center">Staaaash</h1>
+
+<p align="center">
+  <strong>The modern, minimalist tab manager for Chrome.</strong><br/>
+  Save your tabs now. Restore them when you're ready.
+</p>
+
+<p align="center">
+  <a href="#-why-staaaash">Why Staaaash</a> •
+  <a href="#-shortcuts">Shortcuts</a> •
+  <a href="#-installation--development">Install</a> •
+  <a href="#-license">License</a>
+</p>
+
+---
 
 ## ✨ Why Staaaash?
 
 Declutter your browser and your mind. Staaaash helps you organize tabs into named groups so you can focus on the task at hand.
 
-- 🗂 **Smart Grouping**: Save all tabs in your window to a named collection with one click.
-- 🔀 **Merge Groups**: Shift+Drag one group onto another to combine them (duplicates auto-removed).
-- 📌 **Pin & Organize**: Pin important groups to the top, collapse them, drag-and-drop to reorder.
-- 🔄 **Sync Across Devices**: All data synced via Chrome Storage Sync.
-- 🔒 **Privacy First**: No external servers. Your data stays in Chrome.
+| Feature | Description |
+|---------|-------------|
+| 🗂 **Smart Grouping** | Save all tabs in your window to a named collection with one click |
+| 🔀 **Merge Groups** | Shift+Drag one group onto another to combine them |
+| 📌 **Pin & Organize** | Pin important groups to the top, collapse them, drag-and-drop to reorder |
+| 🔄 **Sync Across Devices** | All data synced via Chrome Storage Sync |
+| 🔒 **Privacy First** | No external servers. Your data stays in Chrome |
+| ⚡️ **Instant Load** | Built with Vite and React for blazing fast performance |
+
+---
 
 ## ⌨️ Shortcuts
 
 | Shortcut | Action |
-|----------|--------|
-| `⌘` `/` | Archive all tabs in current window |
-| `↵` | Rename selected group |
-| `⌘` `↵` | Restore selected item |
-| `⌫` | Delete selected item |
-| `P` | Pin/Unpin selected group |
-| `Esc` | Cancel editing |
-| `↑` `↓` | Navigate through items |
+|:--------:|--------|
+| <kbd>⌘</kbd> <kbd>/</kbd> | Archive all tabs in current window |
+| <kbd>↵</kbd> | Rename selected group |
+| <kbd>⌘</kbd> <kbd>↵</kbd> | Restore selected item |
+| <kbd>⌫</kbd> | Delete selected item |
+| <kbd>P</kbd> | Pin/Unpin selected group |
+| <kbd>Esc</kbd> | Cancel editing |
+| <kbd>↑</kbd> <kbd>↓</kbd> | Navigate through items |
+
+---
 
 ## 🛠️ Installation & Development
 
-This extension is built with React, Vite, TypeScript, and Tailwind CSS.
+```bash
+# Clone the repository
+git clone https://github.com/mtskf/Staaaash.git
+cd Staaaash
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/mtskf/Staaaash.git
-   cd Staaaash
-   ```
+# Install dependencies
+pnpm install
 
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
+# Start Dev Server (HMR)
+pnpm run dev
 
-3. **Start Dev Server** (Hot Module Replacement)
-   ```bash
-   pnpm run dev
-   ```
+# Build for production
+pnpm run build
+```
 
-4. **Load in Chrome**
-   - Go to `chrome://extensions/`
-   - Enable **Developer mode** (top right)
-   - Click **Load unpacked**
-   - Select the `dist` directory.
+**Load in Chrome:**
+1. Go to `chrome://extensions/`
+2. Enable **Developer mode**
+3. Click **Load unpacked**
+4. Select the `dist` directory
+
+---
 
 ## 📦 Release Workflow
 
-To create a new release for the Chrome Web Store:
+```bash
+# 1. Bump version in package.json and manifest.json
+# 2. Build
+pnpm run build
 
-1. **Bump Version**: Update `version` in `package.json` and `manifest.json`.
-2. **Build**: Run `pnpm run build`.
-3. **Package**: Zip the contents of the `dist` folder.
-   ```bash
-   cd dist && zip -r ../release/staaaash-vX.X.X-release.zip .
-   ```
-4. **Upload**: Submit the zip file to the Chrome Web Store Dashboard.
+# 3. Package
+cd dist && zip -r ../release/staaaash-vX.X.X.zip .
+```
+
+---
 
 ## 📄 License
 
