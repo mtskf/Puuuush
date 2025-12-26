@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SortableTabCard } from './TabCard';
 import { GripVertical, Trash2, ChevronDown, ChevronRight, Pin, ArrowUpRight, Pencil } from 'lucide-react';
-import { cn, formatRelativeTime } from '@/lib/utils'; // Keep this for now
+import { cn, formatRelativeTime } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Kbd } from '@/components/ui/kbd';
 
 interface GroupCardProps {
   group: Group;
@@ -151,10 +153,18 @@ export function GroupCard({
                   >
                     {group.title}
                   </h3>
-                  <Pencil
-                    className="h-3 w-3 text-muted-foreground shrink-0 cursor-pointer hover:text-foreground"
-                    onClick={() => setIsEditing(true)}
-                  />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Pencil
+                        className="h-3 w-3 text-muted-foreground shrink-0 cursor-pointer hover:text-foreground"
+                        onClick={() => setIsEditing(true)}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="flex items-center gap-2">
+                      <span>Edit</span>
+                      <Kbd>↵</Kbd>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               )}
               <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
@@ -165,34 +175,63 @@ export function GroupCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
-             <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                onClick={() => onRestore(group.id)}
-                title="Restore all tabs"
-             >
-               <ArrowUpRight className="h-3.5 w-3.5" />
-             </Button>
-             <Button
-                variant="ghost"
-                size="icon"
-                className={cn("h-7 w-7", group.pinned ? "text-yellow-500" : "text-muted-foreground")}
-                onClick={() => onUpdateGroup(group.id, { pinned: !group.pinned })}
-                title={group.pinned ? "Unpin group" : "Pin group"}
-             >
-                {group.pinned ? <Pin className="h-3.5 w-3.5 fill-current" /> : <Pin className="h-3.5 w-3.5" />}
-             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-red-500 hover:text-red-600"
-              onClick={() => onRemoveGroup(group.id)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+          <TooltipProvider delayDuration={300}>
+            <div className="flex items-center gap-1">
+              {/* Restore Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                    onClick={() => onRestore(group.id)}
+                  >
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="flex items-center gap-2">
+                  <span>Restore</span>
+                  <Kbd>⌘</Kbd><Kbd>↵</Kbd>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Pin Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn("h-7 w-7", group.pinned ? "text-yellow-500" : "text-muted-foreground")}
+                    onClick={() => onUpdateGroup(group.id, { pinned: !group.pinned })}
+                  >
+                    {group.pinned ? <Pin className="h-3.5 w-3.5 fill-current" /> : <Pin className="h-3.5 w-3.5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="flex items-center gap-2">
+                  <span>{group.pinned ? "Unpin" : "Pin"}</span>
+                  <Kbd>P</Kbd>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Delete Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-red-500 hover:text-red-600"
+                    onClick={() => onRemoveGroup(group.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="flex items-center gap-2">
+                  <span>Delete</span>
+                  <Kbd>⌫</Kbd>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </CardHeader>
 
         {!group.collapsed && (
