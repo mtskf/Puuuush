@@ -56,7 +56,7 @@ export const TabCard = forwardRef<HTMLDivElement, TabCardProps & React.HTMLAttri
                     <ArrowUpRight className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="flex items-center gap-2">
+                <TooltipContent side="bottom" className="flex items-center gap-1">
                   <span>Restore</span>
                   <Kbd>⌘</Kbd><Kbd>↵</Kbd>
                 </TooltipContent>
@@ -76,7 +76,7 @@ export const TabCard = forwardRef<HTMLDivElement, TabCardProps & React.HTMLAttri
                     <X className="h-3 w-3" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="flex items-center gap-2">
+                <TooltipContent side="bottom" className="flex items-center gap-1">
                   <span>Delete</span>
                   <Kbd>⌫</Kbd>
                 </TooltipContent>

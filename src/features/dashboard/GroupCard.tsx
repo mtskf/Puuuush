@@ -161,7 +161,7 @@ export function GroupCard({
                           onClick={() => setIsEditing(true)}
                         />
                       </TooltipTrigger>
-                      <TooltipContent side="bottom" className="flex items-center gap-2">
+                      <TooltipContent side="bottom" className="flex items-center gap-1">
                         <span>Edit</span>
                         <Kbd>↵</Kbd>
                       </TooltipContent>
@@ -191,7 +191,7 @@ export function GroupCard({
                     <ArrowUpRight className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="flex items-center gap-2">
+                <TooltipContent side="bottom" className="flex items-center gap-1">
                   <span>Restore</span>
                   <Kbd>⌘</Kbd><Kbd>↵</Kbd>
                 </TooltipContent>
@@ -209,7 +209,7 @@ export function GroupCard({
                     {group.pinned ? <Pin className="h-3.5 w-3.5 fill-current" /> : <Pin className="h-3.5 w-3.5" />}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="flex items-center gap-2">
+                <TooltipContent side="bottom" className="flex items-center gap-1">
                   <span>{group.pinned ? "Unpin" : "Pin"}</span>
                   <Kbd>P</Kbd>
                 </TooltipContent>
@@ -227,7 +227,7 @@ export function GroupCard({
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="flex items-center gap-2">
+                <TooltipContent side="bottom" className="flex items-center gap-1">
                   <span>Delete</span>
                   <Kbd>⌫</Kbd>
                 </TooltipContent>
