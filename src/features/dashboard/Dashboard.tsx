@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -59,6 +59,32 @@ export function Dashboard() {
   useEffect(() => {
     loadGroups();
   }, [loadGroups]);
+
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
+  const shiftPressedRef = useRef(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Shift') {
+            setIsShiftPressed(true);
+            shiftPressedRef.current = true;
+        }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+        if (e.key === 'Shift') {
+             setIsShiftPressed(false);
+             shiftPressedRef.current = false;
+        }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -121,13 +147,38 @@ export function Dashboard() {
     const activeType = active.data.current?.type;
     const overType = over.data.current?.type;
 
-    // Group Reordering
-    if (activeType === 'Group' && overType === 'Group') {
-        if (active.id !== over.id) {
-            const oldIndex = groups.findIndex(g => g.id === active.id);
-            const newIndex = groups.findIndex(g => g.id === over.id);
-            const newGroups = arrayMove(groups, oldIndex, newIndex).map((g, idx) => ({ ...g, order: idx }));
-            await updateGroups(newGroups);
+    // Group Reordering / Merging
+    if (activeType === 'Group') {
+        let targetGroupId: string | null = null;
+
+        if (overType === 'Group') {
+            targetGroupId = over.id as string;
+        } else if (overType === 'Tab') {
+            const targetGroup = groups.find(g => g.items.some(t => t.id === over.id));
+            if (targetGroup) targetGroupId = targetGroup.id;
+        }
+
+        if (targetGroupId && active.id !== targetGroupId) {
+            if (shiftPressedRef.current) {
+                // Merge Groups
+                const sourceGroup = groups.find(g => g.id === active.id);
+                const targetGroup = groups.find(g => g.id === targetGroupId);
+
+                if (sourceGroup && targetGroup) {
+                    const newItems = [...targetGroup.items, ...sourceGroup.items];
+                    const newGroups = groups
+                        .filter(g => g.id !== sourceGroup.id)
+                        .map(g => g.id === targetGroup.id ? { ...g, items: newItems } : g);
+
+                    await updateGroups(newGroups);
+                }
+            } else if (overType === 'Group') {
+                // Standard Reorder (only group-on-group)
+                const oldIndex = groups.findIndex(g => g.id === active.id);
+                const newIndex = groups.findIndex(g => g.id === targetGroupId);
+                const newGroups = arrayMove(groups, oldIndex, newIndex).map((g, idx) => ({ ...g, order: idx }));
+                await updateGroups(newGroups);
+            }
         }
         return;
     }
@@ -499,12 +550,15 @@ export function Dashboard() {
             {pinnedGroups.length > 0 && (
                 <section className="max-w-3xl mx-auto w-full">
                     <h2 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider">Pinned</h2>
-                    <SortableContext items={pinnedGroups.map(g => g.id)} strategy={verticalListSortingStrategy}>
-                    <div className="flex flex-col gap-4">
-                            {pinnedGroups.map(group => (
-                                <GroupCard
-                                    key={group.id}
-                                    group={group}
+                    <SortableContext
+              items={groups.filter(g => g.pinned).map(g => g.id)}
+              strategy={isShiftPressed ? undefined : verticalListSortingStrategy}
+          >
+            <div className="flex flex-col gap-4">
+            {groups.filter(g => g.pinned).map(group => (
+              <GroupCard
+                key={group.id}
+                group={group}
                                     onRemoveGroup={removeGroup}
                                     onRemoveTab={removeTab}
                                     onUpdateGroup={updateGroupData}
@@ -515,6 +569,7 @@ export function Dashboard() {
                                     selectedTabId={selectedId}
                                     isRenaming={renamingGroupId === group.id}
                                     onRenameStop={() => setRenamingGroupId(null)}
+                                    isMerging={isShiftPressed}
                                 />
                             ))}
                         </div>
@@ -527,7 +582,7 @@ export function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Collections</h2>
                 </div>
-                 <SortableContext items={unpinnedGroups.map(g => g.id)} strategy={verticalListSortingStrategy}>
+                 <SortableContext items={unpinnedGroups.map(g => g.id)} strategy={isShiftPressed ? undefined : verticalListSortingStrategy}>
                     <div className="flex flex-col gap-4">
                          {unpinnedGroups.map(group => (
                             <GroupCard
@@ -543,6 +598,7 @@ export function Dashboard() {
                                 selectedTabId={selectedId}
                                 isRenaming={renamingGroupId === group.id}
                                 onRenameStop={() => setRenamingGroupId(null)}
+                                isMerging={isShiftPressed}
                             />
                         ))}
                     </div>
@@ -551,7 +607,10 @@ export function Dashboard() {
         </div>
 
         {createPortal(
-            <DragOverlay dropAnimation={dropAnimation}>
+            <DragOverlay
+                dropAnimation={dropAnimation}
+                className={isShiftPressed ? 'cursor-copy-important' : 'cursor-grabbing-important'}
+            >
                 {activeItem && activeId ? (
                    'items' in activeItem ? (
                        <div className="w-full max-w-3xl">
