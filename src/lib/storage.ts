@@ -37,11 +37,27 @@ export function initFirebaseSync(onGroupsUpdated: (groups: Group[]) => void) {
 
     if (user) {
       // Subscribe to Firebase real-time updates
-      firebaseUnsubscribe = subscribeToGroups(user.uid, (groups) => {
-        // Update local cache
-        saveToLocal(groups);
+      firebaseUnsubscribe = subscribeToGroups(user.uid, async (firebaseGroups) => {
+        // Get current local groups
+        const localGroups = await getFromLocal();
+
+        // Merge: keep local groups that don't exist in Firebase (they're new and not yet synced)
+        const firebaseIds = new Set(firebaseGroups.map(g => g.id));
+        const newLocalGroups = localGroups.filter(g => !firebaseIds.has(g.id));
+
+        // Combine: Firebase groups + new local groups
+        const mergedGroups = [...firebaseGroups, ...newLocalGroups];
+
+        // Save merged result to local
+        await saveToLocal(mergedGroups);
+
+        // If there were new local groups, sync them to Firebase
+        if (newLocalGroups.length > 0) {
+          await syncToFirebase(mergedGroups);
+        }
+
         // Notify listeners
-        syncCallback?.(groups);
+        syncCallback?.(mergedGroups);
       });
     }
   });
