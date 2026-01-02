@@ -11,7 +11,6 @@ import { getDatabase, ref, set, get, onValue, type Unsubscribe } from 'firebase/
 import type { Group } from '@/types';
 
 // Firebase configuration
-// TODO: Replace with your Firebase project config
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
@@ -22,37 +21,56 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || ''
 };
 
+// Google OAuth Client ID for Web application (not Chrome extension)
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 
 /**
- * Sign in with Google using Chrome Identity API
- * This provides a seamless auth experience in Chrome extensions
+ * Sign in with Google using launchWebAuthFlow
+ * This opens a browser popup for OAuth and works on any machine
  */
 export async function signInWithGoogle(): Promise<User> {
-  return new Promise((resolve, reject) => {
-    // Use chrome.identity for Chrome extension OAuth
-    chrome.identity.getAuthToken({ interactive: true }, async (result) => {
-      const tokenString = result?.token;
-      if (chrome.runtime.lastError || !tokenString) {
-        reject(new Error(chrome.runtime.lastError?.message || 'Failed to get auth token'));
-        return;
-      }
+  const redirectUri = chrome.identity.getRedirectURL();
 
-      try {
-        // Create credential from the token
-        const credential = GoogleAuthProvider.credential(null, tokenString);
-        const authResult = await signInWithCredential(auth, credential);
-        resolve(authResult.user);
-      } catch (error) {
-        // If the token is invalid, remove it and try again
-        chrome.identity.removeCachedAuthToken({ token: tokenString }, () => {
+  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+  authUrl.searchParams.set('redirect_uri', redirectUri);
+  authUrl.searchParams.set('response_type', 'token');
+  authUrl.searchParams.set('scope', 'openid email profile');
+
+  return new Promise((resolve, reject) => {
+    chrome.identity.launchWebAuthFlow(
+      { url: authUrl.toString(), interactive: true },
+      async (responseUrl) => {
+        if (chrome.runtime.lastError || !responseUrl) {
+          reject(new Error(chrome.runtime.lastError?.message || 'Auth failed'));
+          return;
+        }
+
+        try {
+          // Extract access token from response URL
+          const url = new URL(responseUrl);
+          const hashParams = new URLSearchParams(url.hash.substring(1));
+          const accessToken = hashParams.get('access_token');
+
+          if (!accessToken) {
+            reject(new Error('No access token in response'));
+            return;
+          }
+
+          // Sign in to Firebase with the access token
+          const credential = GoogleAuthProvider.credential(null, accessToken);
+          const result = await signInWithCredential(auth, credential);
+          resolve(result.user);
+        } catch (error) {
           reject(error);
-        });
+        }
       }
-    });
+    );
   });
 }
 
@@ -60,30 +78,7 @@ export async function signInWithGoogle(): Promise<User> {
  * Sign out the current user
  */
 export async function signOut(): Promise<void> {
-  // Revoke the Chrome identity token
-  return new Promise((resolve, reject) => {
-    chrome.identity.getAuthToken({ interactive: false }, async (result) => {
-      const tokenString = result?.token;
-      if (tokenString) {
-        // Remove cached token
-        chrome.identity.removeCachedAuthToken({ token: tokenString }, async () => {
-          try {
-            // Revoke token on Google's servers
-            await fetch(`https://accounts.google.com/o/oauth2/revoke?token=${tokenString}`);
-          } catch {
-            // Ignore revocation errors
-          }
-        });
-      }
-
-      try {
-        await firebaseSignOut(auth);
-        resolve();
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
+  await firebaseSignOut(auth);
 }
 
 /**
