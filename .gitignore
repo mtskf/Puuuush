@@ -119,3 +119,7 @@ dist
 
 # Misc
 .DS_Store
+
+# Extension packaging
+*.pem
+*.crx

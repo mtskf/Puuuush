@@ -3,6 +3,7 @@
   "name": "Staaaash - Tab Manager",
   "version": "0.0.1",
   "description": "A Toby-like tab manager for Chrome.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmKOk7Fq9xAhU/OJ2h9QjnOBKTmrEDpf9HqMIXa9s9dKOl3A8RImUVM0VBnR3OJ/1WOKTczcNGNMfXt/P8R8w4Kw+Qi/Kv8xGNnplD+eXANzObnSPSrwYA81T332hkGjWEB1n8RKJl4ug7PGQ0xJ69EV/dOOwO48uE8gdBd7uir/Rhh+oNhsgyaWG6iQDsXEgx4svf8gyKLa7xXbZbNAX1zwHhfIlTEQ4/G2w3tsZOW2O0DZKHJmOvjSDYe8UryrIU4P8UUdn6eIx9zdFIPoB1VIYq07JydAU8NrhYyMZLpjaApJ5297hLAdVV7+k1qFAmTGGNE7K9mI+dDB2T3Y3vwIDAQAB",
   "permissions": [
     "tabs",
     "storage",
