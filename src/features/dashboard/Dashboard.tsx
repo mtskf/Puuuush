@@ -66,7 +66,9 @@ export function Dashboard() {
       removeTab,
       setRenamingGroupId,
       searchInputRef,
-      getFlattenedItems
+      getFlattenedItems,
+      onRequestDeleteGroup: (group) => setGroupToDelete(group),
+      disabled: !!groupToDelete // Disable nav when dialog is open
   });
 
   const {
